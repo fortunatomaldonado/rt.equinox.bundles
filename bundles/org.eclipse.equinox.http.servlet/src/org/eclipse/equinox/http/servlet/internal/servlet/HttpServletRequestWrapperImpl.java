@@ -164,6 +164,8 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 
 		DispatcherType dispatcherType = current.getDispatcherType();
 
+		Map<String, Object> specialOverides = current.getSpecialOverides();
+
 		if ((dispatcherType == DispatcherType.ASYNC) ||
 			(dispatcherType == DispatcherType.REQUEST) ||
 			!attributeName.startsWith("javax.servlet.")) {
@@ -186,11 +188,9 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 					return null;
 				}
 
-				Object attributeValue = super.getAttribute(attributeName);
-
-				if (attributeValue != null) {
-					return attributeValue;
-				}
+				if (specialOverides.containsKey(RequestDispatcher.INCLUDE_CONTEXT_PATH)) {
+ 					return specialOverides.get(RequestDispatcher.INCLUDE_CONTEXT_PATH);
+  				}
 
 				return current.getContextController().getContextPath();
 			}
@@ -199,11 +199,9 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 					return null;
 				}
 
-				Object attributeValue = super.getAttribute(attributeName);
-
-				if (attributeValue != null) {
-					return attributeValue;
-				}
+				if (specialOverides.containsKey(RequestDispatcher.INCLUDE_PATH_INFO)) {
+ 					return specialOverides.get(RequestDispatcher.INCLUDE_PATH_INFO);
+  				}
 
 				return current.getPathInfo();
 			}
@@ -212,11 +210,9 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 					return null;
 				}
 
-				Object attributeValue = super.getAttribute(attributeName);
-
-				if (attributeValue != null) {
-					return attributeValue;
-				}
+				if (specialOverides.containsKey(RequestDispatcher.INCLUDE_QUERY_STRING)) {
+ 					return specialOverides.get(RequestDispatcher.INCLUDE_QUERY_STRING);
+  				}
 
 				return current.getQueryString();
 			}
@@ -225,11 +221,9 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 					return null;
 				}
 
-				Object attributeValue = super.getAttribute(attributeName);
-
-				if (attributeValue != null) {
-					return attributeValue;
-				}
+				if (specialOverides.containsKey(RequestDispatcher.INCLUDE_REQUEST_URI)) {
+ 					return specialOverides.get(RequestDispatcher.INCLUDE_REQUEST_URI);
+  				}
 
 				return current.getRequestURI();
 			}
@@ -238,11 +232,9 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 					return null;
 				}
 
-				Object attributeValue = super.getAttribute(attributeName);
-
-				if (attributeValue != null) {
-					return attributeValue;
-				}
+				if (specialOverides.containsKey(RequestDispatcher.INCLUDE_SERVLET_PATH)) {
+ 					return specialOverides.get(RequestDispatcher.INCLUDE_SERVLET_PATH);
+  				}
 
 				return current.getServletPath();
 			}
@@ -259,18 +251,38 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 			DispatchTargets original = dispatchTargets.getLast();
 
 			if (attributeName.equals(RequestDispatcher.FORWARD_CONTEXT_PATH)) {
+				if (specialOverides.containsKey(RequestDispatcher.FORWARD_CONTEXT_PATH)) {
+ 					return specialOverides.get(RequestDispatcher.FORWARD_CONTEXT_PATH);
+ 				}
+
 				return original.getContextController().getContextPath();
 			}
 			else if (attributeName.equals(RequestDispatcher.FORWARD_PATH_INFO)) {
+				if (specialOverides.containsKey(RequestDispatcher.FORWARD_PATH_INFO)) {
+ 					return specialOverides.get(RequestDispatcher.FORWARD_PATH_INFO);
+ 				}
+
 				return original.getPathInfo();
 			}
 			else if (attributeName.equals(RequestDispatcher.FORWARD_QUERY_STRING)) {
+				if (specialOverides.containsKey(RequestDispatcher.FORWARD_QUERY_STRING)) {
+ 					return specialOverides.get(RequestDispatcher.FORWARD_QUERY_STRING);
+ 				}
+
 				return original.getQueryString();
 			}
 			else if (attributeName.equals(RequestDispatcher.FORWARD_REQUEST_URI)) {
+				if (specialOverides.containsKey(RequestDispatcher.FORWARD_REQUEST_URI)) {
+ 					return specialOverides.get(RequestDispatcher.FORWARD_REQUEST_URI);
+ 				}
+
 				return original.getRequestURI();
 			}
 			else if (attributeName.equals(RequestDispatcher.FORWARD_SERVLET_PATH)) {
+				if (specialOverides.containsKey(RequestDispatcher.FORWARD_SERVLET_PATH)) {
+ 					return specialOverides.get(RequestDispatcher.FORWARD_SERVLET_PATH);
+ 				}
+
 				return original.getServletPath();
 			}
 
@@ -341,7 +353,14 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 	}
 
 	public void removeAttribute(String name) {
-		request.removeAttribute(name);
+		if (dispatcherAttributes.contains(name)) {
+			DispatchTargets current = dispatchTargets.peek();
+
+			current.getSpecialOverides().remove(name);
+		}
+		else {
+			request.removeAttribute(name);
+		}
 
 		DispatchTargets currentDispatchTarget = dispatchTargets.peek();
 
@@ -366,7 +385,20 @@ public class HttpServletRequestWrapperImpl extends HttpServletRequestWrapper {
 
 	public void setAttribute(String name, Object value) {
 		boolean added = (request.getAttribute(name) == null);
-		request.setAttribute(name, value);
+		
+		if (dispatcherAttributes.contains(name)) {
+			DispatchTargets current = dispatchTargets.peek();
+
+			if (value == null) {
+				current.getSpecialOverides().remove(name);
+			}
+			else {
+				current.getSpecialOverides().put(name, value);
+			}
+		}
+		else {
+			request.setAttribute(name, value);
+		}
 
 		DispatchTargets currentDispatchTarget = dispatchTargets.peek();
 
